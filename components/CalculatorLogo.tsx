@@ -1,8 +1,10 @@
 
 import React, { useState } from 'react';
+import { Delete, Divide, Minus, Plus, X, Equal, Hash } from 'lucide-react';
 
 export const CalculatorLogo: React.FC<{ className?: string }> = ({ className = "" }) => {
-  const [display, setDisplay] = useState('1337.00');
+  const [display, setDisplay] = useState('0');
+  const [equation, setEquation] = useState('');
   const [firstOperand, setFirstOperand] = useState<number | null>(null);
   const [operator, setOperator] = useState<string | null>(null);
   const [waitingForNextValue, setWaitingForNextValue] = useState(false);
@@ -22,9 +24,14 @@ export const CalculatorLogo: React.FC<{ className?: string }> = ({ className = "
   const handleAction = (btn: string | number) => {
     const btnStr = btn.toString();
 
+    // Haptic feedback simulation
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(5);
+    }
+
     // Handle Numbers
     if (!isNaN(Number(btnStr))) {
-      if (waitingForNextValue || display === '1337.00') {
+      if (waitingForNextValue) {
         setDisplay(btnStr);
         setWaitingForNextValue(false);
       } else {
@@ -33,12 +40,23 @@ export const CalculatorLogo: React.FC<{ className?: string }> = ({ className = "
       return;
     }
 
-    // Handle Clear
-    if (btn === 'C') {
+    // Handle Clear All
+    if (btn === 'AC') {
       setDisplay('0');
+      setEquation('');
       setFirstOperand(null);
       setOperator(null);
       setWaitingForNextValue(false);
+      return;
+    }
+
+    // Handle Delete single char
+    if (btn === 'DEL') {
+      if (display.length > 1) {
+        setDisplay(display.slice(0, -1));
+      } else {
+        setDisplay('0');
+      }
       return;
     }
 
@@ -53,8 +71,11 @@ export const CalculatorLogo: React.FC<{ className?: string }> = ({ className = "
     // Handle Equals
     if (btn === '=') {
       if (operator && firstOperand !== null) {
-        const result = performCalculation(parseFloat(display));
-        setDisplay(result.toString().slice(0, 10)); // Limit display length
+        const current = parseFloat(display);
+        const result = performCalculation(current);
+        const resultStr = Number.isInteger(result) ? result.toString() : result.toFixed(4);
+        setEquation(`${firstOperand} ${operator} ${current} =`);
+        setDisplay(resultStr.slice(0, 10));
         setFirstOperand(null);
         setOperator(null);
         setWaitingForNextValue(false);
@@ -66,49 +87,67 @@ export const CalculatorLogo: React.FC<{ className?: string }> = ({ className = "
     const currentVal = parseFloat(display);
     if (firstOperand === null) {
       setFirstOperand(currentVal);
-    } else if (operator) {
+    } else if (operator && !waitingForNextValue) {
       const result = performCalculation(currentVal);
       setDisplay(result.toString().slice(0, 10));
       setFirstOperand(result);
     }
     
-    setOperator(btnStr === '÷' ? '÷' : btnStr === '+' ? '+' : btnStr === '-' ? '-' : '×');
+    setOperator(btnStr);
+    setEquation(`${currentVal} ${btnStr}`);
     setWaitingForNextValue(true);
   };
 
-  const buttons = [1, 2, 3, '+', 4, 5, 6, '-', 7, 8, 9, '×', 'C', 0, '.', '÷', '='];
+  const buttons = [
+    { val: 'AC', type: 'func' }, { val: 'DEL', type: 'func' }, { val: '÷', type: 'op' },
+    { val: 7, type: 'num' }, { val: 8, type: 'num' }, { val: 9, type: 'num' }, { val: '×', type: 'op' },
+    { val: 4, type: 'num' }, { val: 5, type: 'num' }, { val: 6, type: 'num' }, { val: '-', type: 'op' },
+    { val: 1, type: 'num' }, { val: 2, type: 'num' }, { val: 3, type: 'num' }, { val: '+', type: 'op' },
+    { val: 0, type: 'num' }, { val: '.', type: 'num' }, { val: '=', type: 'eq' }
+  ];
 
   return (
-    <div className={`relative ${className} group`}>
-      {/* 3D "Shadow" Layer */}
-      <div className="absolute inset-0 bg-indigo-800 rounded-[2.5rem] translate-y-4 group-hover:translate-y-2 transition-transform duration-300"></div>
+    <div className={`relative ${className} select-none group`}>
+      {/* 3D Depth Bases */}
+      <div className="absolute inset-0 bg-indigo-800 rounded-[2.5rem] translate-y-4 group-hover:translate-y-2 transition-transform duration-300 shadow-2xl"></div>
       
       {/* Main Body */}
-      <div className="relative bg-indigo-500 rounded-[2.5rem] p-6 border-4 border-indigo-900 shadow-2xl transform group-hover:-translate-y-2 transition-all duration-300 overflow-hidden">
+      <div className="relative bg-indigo-500 rounded-[2.5rem] p-6 border-4 border-indigo-900 shadow-2xl transform group-hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col h-full">
         
-        {/* Screen */}
-        <div className="bg-emerald-400 border-4 border-indigo-950 h-20 rounded-xl mb-6 flex flex-col items-end justify-center px-4 shadow-inner overflow-hidden">
-          <div className="text-[10px] font-black text-indigo-900/40 uppercase tracking-widest leading-none mb-1">
-            {operator ? `${firstOperand} ${operator}` : 'STANDBY'}
+        {/* Physical-style LCD Screen */}
+        <div className="bg-emerald-400 border-4 border-indigo-950 h-24 rounded-2xl mb-6 flex flex-col items-end justify-center px-4 shadow-inner relative overflow-hidden">
+          <div className="absolute inset-0 bg-black/5 pointer-events-none"></div>
+          <div className="text-[10px] font-black text-indigo-900/40 uppercase tracking-widest leading-none mb-1 text-right w-full">
+            {equation || 'READY'}
           </div>
-          <span className="mono text-2xl font-black text-indigo-950 tracking-tighter truncate w-full text-right">
+          <span className="mono text-3xl font-black text-indigo-950 tracking-tighter truncate w-full text-right leading-none">
             {display}
           </span>
+          {/* Subtle Scanlines */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] pointer-events-none opacity-20"></div>
         </div>
         
         {/* Buttons Grid */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-3 flex-1">
           {buttons.map((btn, i) => (
             <button 
               key={i} 
-              onClick={() => handleAction(btn)}
-              className={`h-10 rounded-lg border-2 border-indigo-950 flex items-center justify-center font-black text-xs shadow-[0px_3px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-none transition-all
-                ${typeof btn === 'number' ? 'bg-indigo-300 hover:bg-indigo-200' : 
-                  btn === '=' ? 'bg-rose-400 hover:bg-rose-300 col-span-4 mt-1 h-12 text-sm' : 
-                  btn === 'C' ? 'bg-amber-400 hover:bg-amber-300' : 
-                  'bg-indigo-400 hover:bg-indigo-300'}`}
+              onClick={() => handleAction(btn.val)}
+              className={`
+                relative rounded-xl border-2 border-indigo-950 flex items-center justify-center font-black text-sm shadow-[0px_3px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-none transition-all
+                ${btn.type === 'num' ? 'bg-indigo-300 hover:bg-indigo-200 text-indigo-950' : 
+                  btn.type === 'eq' ? 'bg-rose-400 hover:bg-rose-300 text-indigo-950 col-span-2' : 
+                  btn.type === 'op' ? 'bg-indigo-400 hover:bg-indigo-300 text-indigo-950' : 
+                  'bg-amber-400 hover:bg-amber-300 text-indigo-950'}
+              `}
             >
-              {btn}
+              {btn.val === '÷' ? <Divide size={16} /> : 
+               btn.val === '×' ? <X size={16} /> : 
+               btn.val === '-' ? <Minus size={16} /> : 
+               btn.val === '+' ? <Plus size={16} /> : 
+               btn.val === '=' ? <Equal size={18} /> : 
+               btn.val === 'DEL' ? <Delete size={16} /> : 
+               btn.val}
             </button>
           ))}
         </div>
@@ -117,12 +156,12 @@ export const CalculatorLogo: React.FC<{ className?: string }> = ({ className = "
         <div className="absolute top-0 left-0 w-full h-1/2 bg-white/10 -skew-y-12 pointer-events-none"></div>
       </div>
 
-      {/* Floating Elements Around */}
-      <div className="absolute -top-4 -right-4 w-12 h-12 bg-rose-500 rounded-full border-4 border-indigo-950 flex items-center justify-center text-white font-black animate-float pointer-events-none">
+      {/* Floating Elements */}
+      <div className="absolute -top-4 -right-4 w-12 h-12 bg-rose-500 rounded-full border-4 border-indigo-950 flex items-center justify-center text-white font-black animate-float pointer-events-none shadow-lg">
         %
       </div>
-      <div className="absolute -bottom-2 -left-4 w-10 h-10 bg-amber-400 rounded-lg border-4 border-indigo-950 flex items-center justify-center text-indigo-950 font-black animate-float [animation-delay:1s] pointer-events-none">
-        π
+      <div className="absolute -bottom-2 -left-4 w-10 h-10 bg-amber-400 rounded-lg border-4 border-indigo-950 flex items-center justify-center text-indigo-950 font-black animate-float [animation-delay:1s] pointer-events-none shadow-lg">
+        <Hash size={20} />
       </div>
     </div>
   );

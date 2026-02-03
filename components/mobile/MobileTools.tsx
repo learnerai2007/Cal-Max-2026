@@ -32,9 +32,12 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 
 interface MobileToolsProps {
   onSelectCalculator: (calc: CalculatorDef) => void;
+  // Fix: Added missing favorites prop to satisfy MobileView requirements
+  favorites: string[];
 }
 
-export const MobileTools: React.FC<MobileToolsProps> = ({ onSelectCalculator }) => {
+// Fix: Destructure favorites from props to resolve type mismatch
+export const MobileTools: React.FC<MobileToolsProps> = ({ onSelectCalculator, favorites }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(['Finance', 'Math']));
 
@@ -126,8 +129,12 @@ export const MobileTools: React.FC<MobileToolsProps> = ({ onSelectCalculator }) 
                         className="flex items-center space-x-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl active:bg-indigo-500/10 active:border-indigo-500/20 transition-all text-left animate-fade-up"
                         style={{ animationDelay: `${idx * 0.05}s` }}
                       >
-                        <div className="w-9 h-9 bg-slate-900 text-indigo-400 rounded-xl flex items-center justify-center shrink-0 shadow-inner">
+                        <div className="w-9 h-9 bg-slate-900 text-indigo-400 rounded-xl flex items-center justify-center shrink-0 shadow-inner relative">
                           <DynamicIcon name={calc.icon} size={16} />
+                          {/* Visual indicator for favorited tools */}
+                          {favorites.includes(calc.id) && (
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full border border-slate-950 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-xs font-bold text-slate-200 truncate">{calc.name}</h4>
